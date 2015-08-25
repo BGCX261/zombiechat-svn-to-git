@@ -1,0 +1,27 @@
+<html>
+<head>
+<title>{% block title %} ZombieChat {% endblock %}</title>
+<style>
+body { font-family: arial, sans-serif; font-size: 83%; }
+</style>
+</head>
+<body>
+
+<h2><a href="/w/">Zombie Chat</a></h2>
+TODO: Secure this page<br/><br/>
+
+{% block user %}
+{# TODO(dbentley): move this to the right-hand side. #}
+<form action="/w/login" method="post">
+{% if user %}
+  Current user phone: {{ user.phone_number }}<br/>
+{% endif %}
+  Set user phone: <input type="text" name="userphone"> <input type="submit" value="Login">
+</form>
+{% endblock user %}
+
+{% block content %}{% endblock content %}
+</body>
+</html>
+
+

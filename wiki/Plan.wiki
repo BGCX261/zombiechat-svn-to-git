@@ -1,0 +1,180 @@
+#summary Plan for ZombieChat
+
+= dbent's vision =
+
+ZombieChat should make it easy for people to figure out what they're doing tonight.  It delivers on the promise of multi-recipient SMS, by changing reply to reply-all.  Whether these people are at their computers or on reasonably-smart phones, they can talk with the group of friends.
+
+== Problem ==
+
+Say Avery wants to go out with his friend tonight.  He sends an SMS to Bob, Charlie, and Doug saying "want to see a movie at 7:30?".  When Bob, Charlie, and Doug reply, the replies only go to Avery, and he suddenly is in charge of logistics.
+
+== How we solve the problem in ZombieChat ==
+
+Avery uses ZombieChat (more on how to do that below).  He creates a new message and selects Bob, Charlie, and Doug.  He enters the text "want to see a movie at 7:30?" and hits send.  Bob, Charlie, and Doug get a message telling them Avery said "want to see a movie at 7:30?" and they can use ZombieChat to reply.  When Bob replies to the message saying, "I'd rather shoot some pool", not only can Avery see it but so can Charlie and Doug.
+
+Avery, Bob, Charlie, and Doug can then all have the conversation about what to do without any one of them becoming a hub or bottleneck.
+
+== Different ways to use ZombieChat ==
+
+When a user gets invited to a new ZombieChat, he'll get an SMS to his cell phone telling him someone invited him to a new ZombieChat.  The user can interact with that ZombieChat through a few technologies.
+
+=== Smartphone App ===
+Perhaps the most useful interaction comes if the user has the ZombieChat application for his smartphone platform installed.  The application looks a lot like the native SMS app, with analogs drawn.  At start-up, it shows the ZombieChats the user is in (compare to the different contacts the user has texted with).  Within these conversations, it shows the conversation in the partychat (compare to the sms's sent between the user and those contacts).  Or a user can create a new ZombieChat, like sending a new SMS, but can select multiple contacts to send the new ZombieChat to.
+
+Though these apps will have to be specific to platform (Android, iPhone, Blackberry(?)), I'll talk about them as if they are one app.  That doesn't mean we want one look and feel of ZombieChat app, but that the differences aren't important for this document.
+
+=== WebApp ===
+Alternatively, zchat.com serves a webapp from the same AppEngine app that runs the ZombieChat backend (more on this below).
+
+This smartphone-optimized website (i.e., it doesn't take up much screen real estate, degrades gracefully in absence of javascript) is a fairly bare-bones webpage that can do the same thing the smartphone app does (display active ZombieChats, participate in a ZombieChat, create a new ZombieChat).  It also offers administration of an account (delivery options, download of relevant smartphone app, linking a phone number to an email address for authentication).
+
+=== SMS -- invite only ===
+But how does the user learn about ZombieChat at all?  By SMS.  There are two models of how SMS integration could work.  The first is simpler.  This is that first one.
+
+When a user gets invited to a ZombieChat, an SMS is sent to them via the email bridge for a phone, the way Dodgeball did once upon a time.  It includes the message, and a pointer to zchat.com.  If a ZombieChat has had activity that the user hasn't seen, and the user was active in the room but hasn't seen the new messages, we would also send them an SMS of the form, "Avery's ZombieChat has had 37 messages since you checked; do so at zchat.com"
+
+=== SMS -- two-way ===
+Unfortunately, this story is simple to implement, but means that users with non-smartphones have no way to contribute to a ZombieChat.  A second option is to have dual-way SMS integration, where a user who gets a ZombieChat SMS can reply to that SMS with what they want to say in the ZombieChat.  This message would get sent to the ZombieChat, and imply that they wanted each message to the chat to be SMSed to them.
+
+A note on implementation (hat tip to nsanch):  We could get a cell phone card for a computer, give that computer access to ZombieChat, and it could relay messages back and forth over this bridge.
+
+=== Partychat/XMPP bridge ===
+If AppEngine doesn't have support for XMPP, but people want to interact with a ZombieChat as an XMPP bot, then we could use a bridge.  This bridge (the same kind that two-way SMS needs) would expose, to trusted clients, the ability to get messages for any ZombieChat, and post messages and meta-data (joining, leaving a room) to any ZombieChat.
+
+This integration is kinda iffy for a few reasons.
+  * It would take work.
+  * If Avery is chatting over XMPP, sending a message to him is very easy.  If Bob is chatting over two-way SMS, getting all those messages will be annoying.  We want to enable more the latter usage than the former.
+  * Users of XMPP want faster responses.  Can we support that sub-1-second latency on AppEngine?
+
+_TODO(dbentley): this is hand-wavy.  Who wants more info?  Who can write more info?_
+
+== Technology ==
+ZombieChat will be an AppEngine app.  It will store all the metadata (who's in what ZombieChat) and data (who said what in which ZombieChat) in AppEngine's datastore.  The API provided will be a simple RESTful HTTP interface.  (Perhaps using Protocol Buffers as the data format?)  Each request will have the user's id and some kind of password.  Methods include:
+  * Create a new ZombieChat, with these users, with this initial message.
+  * Send a message.
+  * Leave a ZombieChat.
+  * Get messages for me since the last time I checked.
+
+This interface will be used by the different smartphone apps, and conceptually by the webapp.  (The webapp may actually not go over the web but just stay in-process).  There would be a related interface for providing bridges (for two-way SMS and partychat integration).  The bridges might have to be trusted and given the equivalent of superuser powers with a stronger authentication.
+
+=== AppEngine technologies used ===
+  * Datastore
+  * Email out (for SMS)
+  * MemCache (possibly for meta data?)
+  * If they every supported SMS or XMPP natively, we would be all overthat.
+
+== Caveats/Usages/Etc. ==
+Here are some design points that may or may not be central.
+
+=== Phone Numbers as Identity ===
+Because we focus on "better multi-recipient SMS", ZombieChat users are identified by phone number.  This leads to some issues.
+  * Privacy.  (dolapo, could you expand on this?  I believe it was your concern.)
+  * Poor user experience, because who remembers phone numbers?  I address how to mitgate this below.
+  * It really focuses the product on the mobile space.  Maybe the user space can be either phone number *or* email?
+
+
+=== How to mitigate Phone Number User Experience ===
+People have contacts in their phones, so if people don't like phone numbers, they have that mapping somewhere.  In the smartphone apps, we should send along contact info as much as is possible, in a way that doesn't skeeve out users.  It should be clear that we plan to use this data.  As I'm inviting a person to a ZombieChat, it should be clear that we intend to upload their name.  Then when we send the "Invite Person to ZombieChat" request to the server, we send along both a phone number and a name.  The concern is that I have the name listed in my phone as "Fart Face", and would be embarrassed if Bob realized I called him Fart Face.  We should figure out how to balance this risk with the utility of having real names.
+
+At the least, in the smartphone app, we should filter incoming messages that only have a phone number and not an alias associated with them.  If they are in this phone's contacts, we should use the contact name.
+
+=== Customizing for the experience they can have ===
+People have different devices.  When we see the phone number (222) 222-2222 was invited to a new ZombieChat, what welcome SMS do we use?  If they have the SmartPhone app installed, we should send them a URL that points to a page in that app (TODO(dbentley): you can do this in iPhone; can you in Androind?).  If they have a web browser, we should point them to zchat.com.  If they're near a computer, we should also point them to zchat.com.  If they have none of those, we should send them an SMS that tells them how to reply.  ... Unless we haven't implemented the 2-way SMS, in which case we should say something like "So you should just effing call him, cause we can't help you."
+
+It would be great if we could customize the experience for the most they can get, while also including the largest number of potential users.
+
+== Non-goals ==
+* Real-time chat latency.  Being as good as SMS is okay.  You send a message, go back to your driving, and then check later.
+* Support for 1000's of messages per ZombieChat per day.  This isn't a place to hang out and chat.  It's directed.  You use it to figure out where you're going.  You maybe use it once you're there to say "Charlie, you really should come out; the party's still going." or "can you believe Avery is making out with that chick?"  But it isn't a twitter chat-room.
+* Bot support.  It will probably happen when one of us is bored, but if it does it will be undocumented.
+* More things.  Seriously, it's a great suggestion of ak's to get these well described.
+
+
+== Summary ==
+ZombieChat delivers on the promise of multi-recipient SMS by turning reply into reply-all.  It's meant for non-techie users who already use SMS and multi-recipient SMS, but are frustrated by it.
+
+= nsanch's plan before he knew about zombiechat =
+
+==HTTP<=>bot interface==
+
+  * ReceivedMessage proto
+    * string sender
+    * string bot
+    * string message
+  * MessageReply
+    * repeated string recipient
+    * string bot
+    * string message
+
+  * /msg
+    * HTTP POST
+    * accepts a ReceivedMessage proto, returns a repeated MessageReply list
+    * how should this authenticate? maybe an SSL+login step at first, then just a cookie?
+
+==User-viewable interface==
+
+  * /
+    * shows you rooms you're in.
+  * /create
+    * room name
+    * initial set of members (sends them an initial message, auto-adds them, and tells them how to leave)
+  * /chat/pancake-ny
+    * tells you about the chat (you must be a member of the chat to view the page)
+      * members, creation-date, most recent message time
+      * if you're not a member, tells you how to join.
+    * other things that are chat-level:  
+      * /chat/pancake-ny/configure
+        * only password for now
+      * /chat/pancake-ny/scores -- clickable list of targets
+      * /chat/pancake-ny/score/nsanch -- shows you the score, and the ten most recent reasons.
+      * /chat/pancake-ny/reasons/nsanch?num=N&start=S -- json for older reasons
+  * /kounterss
+    * for variables
+
+==DB==
+  * Connection
+    * string user
+    * string alias
+    * string bot
+    * Room room
+    * Immutable. When someone leaves a room, this gets deleted. When they join a room, a new instance is created. This should help a bunch with caching.
+  * Room
+    * string name
+    * repeated Connection members -- are circular dependencies okay? if not, Connection can just have a string room instead of aa Reference.
+    * We should try not to write to this (except for /join and /leave, of course). Hopefully we can cache this in a memcache
+  * Score
+    * string target
+    * string room
+    * int score
+  * Reasons
+    * bool is_increment
+    * int score_after
+    * string target
+    * string reason
+    * optional string original_message
+    * optional datetime timestamp
+
+  * /msg impl:
+    * looks up Connection based on user+bot in ReceivedMessage
+    * gets members of Room using its members() repeated field.
+    * Request
+      * const ReceivedMessage original -- people generally shouldn't look at this, just for debugging
+      * ReceivedMessage in -- can be updated, by RegexCommand for example.
+      * MessageReply out
+      * bool has_been_handled
+      * bool is_done_handling
+    * Command
+      * handle(Request r)
+        * updates has_been_handled and is_done_handling. The latter cuts off all other commands.
+    * SlashCommand base class
+      * set_command_name
+      * set_args(list<Arg>)
+      * Arg
+        * string name
+        * ArgType type
+      * parse() that returns a dictionary of name => value
+    * RegexCommand
+    * PlusPlusCommand
+      * looks up Score for target
+      * adds reason
+    * MessageRelayingCommand

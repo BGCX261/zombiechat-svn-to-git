@@ -1,0 +1,56 @@
+<html>
+<head>
+<title>ZombieChat Admin Interface</title>
+<style>
+body { font-family: arial, sans-serif; font-size: 83%; }
+</style>
+</head>
+<body>
+TODO: Secure this page
+
+<h1>ZombieChat Admin Interface</h1>
+
+<h2>Create quick chat</h2>
+
+Phone numbers (new or existing):<br/>
+
+<form action="/create_room" method="post">
+  <input type="text" name="userphone"> acting user<br/>
+  <input type="text" name="invited_userphone"><br/>
+  <input type="text" name="invited_userphone"><br/>
+  <input type="text" name="invited_userphone"><br/>
+  <input type="text" name="invited_userphone"><br/>
+  <input type="submit" value="Create room">
+</form>
+
+<h2>Create chat room</h2>
+
+Not yet supported
+
+<h2>Send message</h2>
+
+<form action="/send_message" method="post">
+  <input type="text" name="userphone"> user phone #<br/>
+  <input type="text" name="roomkey"> room key <br/>
+  <input type="text" name="message_text"> message <br/>
+  <input type="submit" value="Send message">
+</form>
+
+<h2>Users</h2>
+
+{% for user in users %}
+  {{ user.phone_number }} {{ user.key }}<br/>
+{% endfor %}
+
+<h2>Chats</h2>
+
+{% for room in rooms %}
+  {{ room.key }}<br/>
+{% endfor %}
+
+TODO: List members using new data model
+
+</body>
+</html>
+
+

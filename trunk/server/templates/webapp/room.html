@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room.description }}{% endblock title %}
+
+{% block content %}
+<h1>{{ room.description }}</h1>
+
+<h2>Members</h2>
+<table><tr>
+{% for member in room.members %}
+<td><a href=/w/user/{{ member.key }}>{{ member.display_name }}</a></td>
+{% endfor %}
+</tr></table>
+
+<h2>Messages</h2>
+<table>
+{% for message in room.messages %}
+<tr>
+<td>{{ message.user.display_name }}</td>
+<td>{{ message.msg_obj.text }}</td>
+</tr>
+{% endfor %}
+
+<form action="/send_message" method="post">
+<input type="hidden" name="userphone" value="{{ user.phone_number }}">
+<input type="hidden" name="roomkey" value="{{ room.room.key }}">
+<tr>
+<td>You:</td>
+<td>
+<input type="text" name="message_text">
+<input type="submit" value="send">
+</td>
+<tr>
+</form>
+
+<table>
+
+
+<h2>Add More People</h2>
+<form action="/invite_user" method="post">
+  <input type="hidden" name="userphone"  value="{{ user.phone_number }}">
+  <input type="hidden" name="roomkey" value="{{ room.room.key }}">
+  <input type="text" name="invited_userphone"><br/>
+  <input type="text" name="invited_userphone"><br/>
+  <input type="text" name="invited_userphone"><br/>
+  <input type="text" name="invited_userphone"><br/>
+  <input type="submit" value="Invite More People">
+</form>
+
+{% endblock content %}
